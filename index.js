@@ -18,29 +18,32 @@ const options = {
   arrayMode: false, //"strict",
 };
 
-const missingAccess = (filename) => loadSource(filename)
+const missingAttribute = (filename,attribute) => loadSource(filename)
   .then(xmlData => xmlData.toString())
   .then(xmlData => {
     if (parser.validate(xmlData) === true) {
       var sourceList = parser.parse(xmlData, options)['b:Sources']['b:Source'];
-      const missingAccessDateList = sourceList.filter(source => !source.hasOwnProperty('b:YearAccessed'));
+      const missingAccessDateList = sourceList.filter(source => !source.hasOwnProperty(attribute));
       return missingAccessDateList;
-    } else console.log('invalid');
+    } else console.log('invalid XML');
   });
 
 /**
- *  Extracts entries with missing Source and exports them to a separate file
- * @param {*} filename 
+ *  Extracts entries with missing Attribute and exports them to a separate file
+ * @param {String} filename 
+ * @param {String} attribute 
  */
-function analyzeXML (filename) {
-  missingAccess(filename).then(data => {
-    console.log('Sum of Elements without Access Date:', data.length, '\n\nExport to missingAccessDate.xml');
+function analyzeXML (filename,attribute) {
+  missingAttribute(filename,attribute).then(data => {
+    console.log(`Sum of Elements without "${attribute}": ${data.length}'\n\nExport to missingAttribute.xml`);
+    return data;
   }).then(data => {
+    console.log(data);
     return { 'b:Sources': { 'b:Source': data } }
   })
   .then(data => {
     const xmldata = new parser.j2xParser().parse(data).replace('<b:Sources>', '<?xml version="1.0" encoding="UTF-8"?><b:Sources xmlns:b = "http://schemas.openxmlformats.org/officeDocument/2006/bibliography" xmlns = "http://schemas.openxmlformats.org/officeDocument/2006/bibliography" SelectedStyle = "" > ');
-    fs.writeFileSync('missingAccessDate.xml', xmldata);
+    fs.writeFileSync('missingAttribute.xml', xmldata);
   })
 }
 
@@ -53,7 +56,7 @@ function analyzeXML (filename) {
  * @param {*} day 
  */
 function fixAccessDate (filename, outputFilename, year, month, day) {
-  missingAccess(filename).then(data => data.map(entry => {
+  missingAttribute(filename,'b:YearAccessed').then(data => data.map(entry => {
     return {
       ...entry,
       'b:YearAccessed': year,
@@ -70,5 +73,4 @@ function fixAccessDate (filename, outputFilename, year, month, day) {
 }
 
 const filename = 'Sources.xml';
-analyzeXML(filename);
-fixAccessDate(filename,'fixedAccessDate.xml', 2019, 12, 05);
+analyzeXML(filename,'b:Year');
