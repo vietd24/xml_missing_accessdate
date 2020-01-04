@@ -72,5 +72,27 @@ function fixAccessDate (filename, outputFilename, year, month, day) {
   })
 }
 
+/**
+ * Adds "o.J." (German abbreviation for no date) to each entry without a date and exports fixed entries in a separate file
+ * @param {*} filename 
+ * @param {*} outputFilename 
+ */
+function fixDate (filename, outputFilename) {
+  missingAttribute(filename, 'b:Year').then(data => data.map(entry => {
+    return {
+      ...entry,
+      'b:Year': 'o.J.',
+    };
+  })).then(data => {
+    return { 'b:Sources': { 'b:Source': data } }
+  }).then(data => {
+    const xmldata = new parser.j2xParser().parse(data).replace('<b:Sources>', '<?xml version="1.0" encoding="UTF-8"?><b:Sources xmlns:b = "http://schemas.openxmlformats.org/officeDocument/2006/bibliography" xmlns = "http://schemas.openxmlformats.org/officeDocument/2006/bibliography" SelectedStyle = "" > ');
+    fs.writeFileSync(outputFilename, xmldata);
+    console.log(`Fixed Export to ${outputFilename}`);
+  })
+}
+
 const filename = 'Sources.xml';
 analyzeXML(filename,'b:Year');
+// fixAccessDate(filename,'fixedAccessDate.xml', 2019, 12, 05);
+fixDate(filename,'fixedDate.xml');
